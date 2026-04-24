@@ -9,7 +9,7 @@
 
 > Un tableau de bord interactif comparant les exoplanètes potentiellement habitables avec les paramètres de référence de la Terre.
 
-![Aperçu du tableau de bord](https://via.placeholder.com/800x400?text=Exoplanet+Habitability+Dashboard)
+![Aperçu du tableau de bord](https://an-steve.github.io/Dashboard-Astronomie/)
 
 ##  Fonctionnalités
 
