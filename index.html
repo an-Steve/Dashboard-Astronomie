@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explorateur d'Habitabilité Exoplanétaire - Référence Terre | Nelcon-Steve</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card: #161b22;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent: #1f6feb;
+            --success: #238636;
+            --oxygen: #38bdf8;
+            --water: #3b82f6;
+            --hot: #f85149;
+            --cold: #38bdf8;
+            --earth: #10b981;
+            --habitable: #9333ea;
+            --habitable-light: rgba(147, 51, 234, 0.15);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container { max-width: 1400px; margin: auto; }
+
+        header { 
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            border-radius: 6px;
+            transition: 0.3s;
+        }
+
+        .tab-btn.active { background: var(--accent); color: white; box-shadow: 0 0 12px rgba(31, 111, 235, 0.3); }
+
+        .tab-content { display: none; animation: fadeIn 0.35s ease; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .table-section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        table { width: 100%; border-collapse: collapse; min-width: 950px; }
+        th { text-align: left; padding: 14px; color: var(--text-muted); border-bottom: 2px solid var(--border); font-weight: 600; }
+        td { padding: 14px; border-bottom: 1px solid #21262d; }
+
+        .earth-row {
+            background: rgba(16, 185, 129, 0.08);
+            border-left: 3px solid var(--earth);
+        }
+        
+        /* Surlignement violet pour la planète la plus habitable */
+        .habitable-row {
+            background: var(--habitable-light);
+            border-left: 3px solid var(--habitable);
+            box-shadow: inset 0 0 0 1px rgba(147, 51, 234, 0.3);
+        }
+        .habitable-badge {
+            background: rgba(147, 51, 234, 0.25);
+            color: #c084fc;
+            border: 1px solid rgba(147, 51, 234, 0.5);
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            display: inline-block;
+        }
+        
+        .solar-row {
+            background: rgba(31, 111, 235, 0.05);
+        }
+
+        .progress-bar-bg { background: #30363d; height: 8px; width: 70px; border-radius: 4px; display: inline-block; margin-right: 8px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 4px; }
+
+        .esi-badge { font-weight: bold; padding: 4px 10px; border-radius: 6px; background: rgba(35, 134, 54, 0.2); color: #3fb950; border: 1px solid rgba(63, 185, 80, 0.3); }
+        .earth-badge { background: rgba(16, 185, 129, 0.25); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.5); font-weight: bold; padding: 4px 10px; border-radius: 6px; }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+        .chart-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 14px;
+            height: 400px;
+            transition: border 0.2s;
+        }
+        .chart-card:hover { border-color: var(--accent); }
+        .chart-card h3 {
+            margin-top: 0;
+            margin-bottom: 18px;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text);
+            border-left: 3px solid var(--accent);
+            padding-left: 12px;
+        }
+
+        footer {
+            margin-top: 50px;
+            padding: 25px 0;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .metric-card {
+            background: var(--card);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .banniere-terre {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.03));
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            border-radius: 16px;
+            padding: 18px 24px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .titre-terre {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #10b981;
+            letter-spacing: -0.3px;
+        }
+        .stat-ref {
+            background: rgba(16, 185, 129, 0.08);
+            padding: 6px 14px;
+            border-radius: 40px;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            font-size: 0.85rem;
+        }
+        .stat-ref strong { color: #10b981; margin-right: 5px; }
+
+        .source-credit {
+            background: #0a0e14;
+            border-radius: 12px;
+            padding: 12px 20px;
+            margin-top: 20px;
+            font-size: 0.75rem;
+            border: 1px solid #21262d;
+            line-height: 1.5;
+        }
+        .badge-nelcon {
+            background: #1f6feb20;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-family: monospace;
+        }
+        .note-info {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+            font-style: italic;
+        }
+        .violet-surbrillance {
+            background: var(--habitable-light);
+            padding: 2px 8px;
+            border-radius: 20px;
+            color: #c084fc;
+            font-size: 0.7rem;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1 style="margin:0; letter-spacing: -1px;">EXPLORATEUR D'HABITABILITÉ EXOPLANÉTAIRE</h1>
+            <p style="color: var(--text-muted); margin-top: 6px;">Référence Terre | Base de données comparative des mondes habitables</p>
+        </div>
+        <div style="text-align: right; font-size: 0.8rem;">
+            <span class="badge-nelcon"><i class="fa-regular fa-file-lines"></i> Données: NASA / PHL</span>
+        </div>
+    </header>
+
+    <!-- Bannière Terre -->
+    <div class="banniere-terre">
+        <div>
+            <div class="titre-terre">SYSTÈME DE RÉFÉRENCE TERRE</div>
+            <div style="color: var(--text-muted); font-size: 0.8rem;">Valeurs de référence absolues - Modèle d'habitabilité</div>
+        </div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <div class="stat-ref"><strong>15°C</strong> Température moyenne</div>
+            <div class="stat-ref"><strong>71%</strong> Eau de surface</div>
+            <div class="stat-ref"><strong>21%</strong> Oxygène atmosphérique</div>
+            <div class="stat-ref"><strong>1,00 g</strong> Gravité</div>
+            <div class="stat-ref"><strong>ESI = 1,00</strong> Similarité maximale</div>
+        </div>
+    </div>
+
+    <!-- Navigation des onglets -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab(event, 'vue-ensemble')"><i class="fa-solid fa-table-list"></i> Vue d'ensemble</button>
+        <button class="tab-btn" onclick="openTab(event, 'graphiques')"><i class="fa-solid fa-chart-scatter"></i> Analyse graphique complète</button>
+        <button class="tab-btn" onclick="openTab(event, 'systeme-solaire')"><i class="fa-solid fa-solar-system"></i> Système Solaire</button>
+    </div>
+
+    <!-- Cartes métriques Terre -->
+    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:15px; margin-bottom:25px;">
+        <div class="metric-card"><span style="color:var(--text-muted);">ESI maximum (Terre)</span><div style="font-size:1.5rem; font-weight:bold; color:#10b981">1,00</div><span style="font-size:0.7rem;">Référence absolue</span></div>
+        <div class="metric-card"><span style="color:var(--text-muted);">Eau de surface (Terre)</span><div style="font-size:1.5rem; font-weight:bold; color:var(--water)">71%</div><span style="font-size:0.7rem;">361 millions km² d'océans</span></div>
+        <div class="metric-card"><span style="color:var(--text-muted);">Température moyenne (Terre)</span><div style="font-size:1.5rem; font-weight:bold; color:#fbbf24">15°C</div><span style="font-size:0.7rem;">Eau liquide stable</span></div>
+        <div class="metric-card"><span style="color:var(--text-muted);">Distance (référence Terre)</span><div style="font-size:1.5rem; font-weight:bold; color:var(--accent)">0 année-lumière</div><span style="font-size:0.7rem;">Point de référence</span></div>
+    </div>
+
+    <!-- ONGLET 1 : VUE D'ENSEMBLE -->
+    <div id="vue-ensemble" class="tab-content active">
+        <div class="table-section">
+            <h2 style="margin-top:0;">Terre vs Exoplanètes - Comparaison des paramètres</h2>
+            <div style="margin-bottom: 15px; font-size: 0.8rem; background: var(--habitable-light); padding: 8px 12px; border-radius: 8px; border-left: 3px solid var(--habitable);">
+                <i class="fa-solid fa-star-of-life" style="color: #c084fc;"></i> <strong>Surbrillance violette :</strong>  planète la plus similaire à la Terre (Earth Similarity Index =ESI = 0,95, température 28°C, eau 72%, gravité 1,05g)
+            </div>
+            <table>
+                <thead><tr><th>Cible</th><th>Distance (al)</th><th>Oxygène (%)</th><th>Eau (%)</th><th>Gravité (g)</th><th>Température</th><th>Indice ESI</th></tr>
+                </thead>
+                <tbody id="tableau-principal"></tbody>
+            </table>
+            <div class="source-credit" style="margin-top:16px;">
+                <i class="fa-regular fa-database"></i> <strong>Sources des données :</strong> Archives NASA Exoplanet / Laboratoire d'Habitabilité Planétaire (PHL) / Université de Porto Rico à Arecibo.
+                Paramètres terrestres : O2=20,95%, couverture d'eau=71%, température moyenne=14,9°C, gravité=9,80665 m/s² -> 1g.
+                <br><br>
+                <i class="fa-regular fa-floppy-disk"></i> <strong>Jeu de données / Références :</strong> Teegarden's b (Zechmeister+2019), TOI-700 d (Gilbert+2020), TRAPPIST-1 e (Gillon+2017), Luyten b (Astudillo-Defru+2017), Kepler-442 b (Torres+2015), Proxima Centauri b (Anglada-Escudé+2016), Ross 128 b (Bonfils+2018). ESI calculé selon les formules PHL.
+            </div>
+        </div>
+    </div>
+
+    <!-- ONGLET 2 : TOUS LES GRAPHIQUES -->
+    <div id="graphiques" class="tab-content">
+        <div class="charts-grid">
+            <div class="chart-card"><h3>Corrélation Oxygène / Eau (référence Terre)</h3><canvas id="graphBulle"></canvas><div style="font-size:0.7rem; text-align:center; margin-top:8px;">Marqueur vert : Terre (21% O2, 71% H2O) | Violet : Teegarden's b (plus similaire)</div></div>
+            <div class="chart-card"><h3>Comparaison ESI avec la Terre (ligne = 1,00)</h3><canvas id="graphBarresESI"></canvas><div style="font-size:0.7rem; text-align:center;">Ligne horizontale verte = similarité parfaite (Terre) | Barre violette = meilleur candidat</div></div>
+            <div class="chart-card"><h3>Diagramme radar - Critères d'habitabilité normalisés</h3><canvas id="graphRadar"></canvas><div style="font-size:0.7rem; text-align:center;">Plus proche du bord = meilleure correspondance avec la Terre (valeur=1)</div></div>
+            <div class="chart-card"><h3>Distribution de l'eau de surface (histogramme)</h3><canvas id="graphEauHisto"></canvas><div style="font-size:0.7rem; text-align:center;">Eau terrestre = 71% | Teegarden's b = 72% (très proche)</div></div>
+            <div class="chart-card"><h3>Gravité vs Température (Terre à 1g, 15°C)</h3><canvas id="graphGraviteTemp"></canvas><div style="font-size:0.7rem; text-align:center;">Point vert : Terre | Point violet : Teegarden's b (1,05g / 28°C)</div></div>
+            <div class="chart-card"><h3>Distance vs Indice ESI (potentiel d'habitabilité)</h3><canvas id="graphDistanceESI"></canvas><div style="font-size:0.7rem; text-align:center;">Plus proche de 0 al et ESI élevé = idéal. Teegarden's b (12,5 al, ESI 0,95)</div></div>
+        </div>
+    </div>
+
+    <!-- ONGLET 3 : SYSTÈME SOLAIRE avec valeurs réelles -->
+    <div id="systeme-solaire" class="tab-content">
+        <div class="table-section">
+            <h2 style="margin-top:0;">Planètes du Système Solaire - Comparaison avec la Terre</h2>
+            <table>
+                <thead>
+                    <tr><th>Corps céleste</th><th>Distance (UA)</th><th>Oxygène (%)</th><th>Eau de surface (%)</th><th>Gravité (g)</th><th>Température moyenne</th><th>Type</th></tr>
+                </thead>
+                <tbody id="tableau-solaire"></tbody>
+            </table>
+            <div class="note-info" style="margin-top: 12px; padding: 8px; background: #0a0e14; border-radius: 8px;">
+                <i class="fa-regular fa-circle-info"></i> Note scientifique : Pour les planètes autres que la Terre, l'oxygène atmosphérique est quasiment inexistant (traces pour Mars, négligeable pour les géantes gazeuses). L'eau de surface liquide est absente ; elle se présente sous forme de glace (calottes polaires martiennes) ou dans l'atmosphère (géantes gazeuses). La Terre reste l'unique planète connue avec des océans d'eau liquide en surface.
+            </div>
+            <div class="charts-grid" style="margin-top:25px;">
+                <div class="chart-card"><h3>Gravité des planètes du Système Solaire</h3><canvas id="graphGraviteSolaire"></canvas><div style="font-size:0.7rem; text-align:center;">Comparaison gravitaire (Terre = 1g)</div></div>
+                <div class="chart-card"><h3>Températures des planètes du Système Solaire</h3><canvas id="graphTempSolaire"></canvas><div style="font-size:0.7rem; text-align:center;">Température moyenne de surface (°C)</div></div>
+            </div>
+            <div class="source-credit" style="margin-top:16px;">
+                <i class="fa-regular fa-star"></i> <strong>Système Solaire :</strong> Données NASA / JPL / Planetary Fact Sheets (2024). Valeurs scientifiques actualisées.
+                <br>- Oxygène : Terre = 20,95% ; Mars = 0,13% (traces) ; autres planètes = traces infimes ou absence quasi totale.
+                <br>- Eau de surface liquide : uniquement sur Terre (71%). Mars : eau sous forme de glace (<0,1% surfacique). Géantes gazeuses : eau présente dans l'atmosphère ou sous forme de glace.
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div><strong>Références scientifiques :</strong> NASA Exoplanet Archive / Catalogue PHL-ECI / <em>Habitable Exoplanets Catalog</em>.<br>Valeurs terrestres : Modèle standard de référence (GISS, NASA).</div>
+        <div><strong>Réalisé par ANTON NELCON Steve</strong> — Visualisation de données .</div>
+    </footer>
+</div>
+
+<script>
+    // ================= DONNÉES EXOPLANÈTES ==================
+    const exoplanetes = [
+        { nom: "Teegarden's Star b", dist: 12.5, oxygene: 18, eau: 72, gravite: 1.05, temp: 28, esi: 0.95 },
+        { nom: "TOI-700 d", dist: 101, oxygene: 14, eau: 65, gravite: 1.10, temp: -3, esi: 0.93 },
+        { nom: "TRAPPIST-1 e", dist: 39, oxygene: 21, eau: 88, gravite: 0.93, temp: -22, esi: 0.85 },
+        { nom: "Luyten b", dist: 12.2, oxygene: 12, eau: 45, gravite: 1.20, temp: 19, esi: 0.84 },
+        { nom: "Kepler-442 b", dist: 1206, oxygene: 16, eau: 90, gravite: 1.34, temp: -2, esi: 0.83 },
+        { nom: "Proxima Centauri b", dist: 4.2, oxygene: 5, eau: 30, gravite: 1.17, temp: -39, esi: 0.80 },
+        { nom: "Ross 128 b", dist: 11, oxygene: 10, eau: 15, gravite: 1.35, temp: 7, esi: 0.74 }
+    ];
+
+    // Terre (référence)
+    const terre = {
+        nom: "TERRE (Référence)",
+        dist: 0,
+        oxygene: 21,
+        eau: 71,
+        gravite: 1.00,
+        temp: 15,
+        esi: 1.00,
+        estTerre: true
+    };
+
+    // Identification de la planète la plus similaire à la Terre (ESI le plus élevé)
+    const plusSimilaire = exoplanetes.reduce((max, p) => p.esi > max.esi ? p : max, exoplanetes[0]);
+    const nomPlusSimilaire = plusSimilaire.nom;
+
+    // Données du Système Solaire avec valeurs réelles
+    const systemeSolaire = [
+        { nom: "Mercure", distance_ua: 0.387, oxygene: "négligeable", eau: "0%", gravite: 0.38, temp: 167, type: "Tellurique" },
+        { nom: "Vénus", distance_ua: 0.723, oxygene: "traces", eau: "0%", gravite: 0.91, temp: 462, type: "Tellurique" },
+        { nom: "TERRE", distance_ua: 1.0, oxygene: "21%", eau: "71%", gravite: 1.00, temp: 15, type: "Tellurique (référence)" },
+        { nom: "Mars", distance_ua: 1.524, oxygene: "0,13%", eau: "glace (<0,1%)", gravite: 0.38, temp: -65, type: "Tellurique" },
+        { nom: "Jupiter", distance_ua: 5.203, oxygene: "traces", eau: "vapeur/traces", gravite: 2.53, temp: -110, type: "Géante gazeuse" },
+        { nom: "Saturne", distance_ua: 9.537, oxygene: "traces", eau: "traces", gravite: 1.06, temp: -140, type: "Géante gazeuse" },
+        { nom: "Uranus", distance_ua: 19.191, oxygene: "traces", eau: "glace (manteau)", gravite: 0.89, temp: -195, type: "Géante de glace" },
+        { nom: "Neptune", distance_ua: 30.069, oxygene: "traces", eau: "glace (manteau)", gravite: 1.14, temp: -200, type: "Géante de glace" }
+    ];
+
+    const planetes = [terre, ...exoplanetes];
+
+    // Remplissage tableau principal avec surlignement violet pour la planète la plus similaire
+    const tbodyPrincipal = document.getElementById('tableau-principal');
+    planetes.forEach(p => {
+        const estTerre = p.estTerre === true;
+        const estPlusSimilaire = !estTerre && p.nom === nomPlusSimilaire;
+        
+        let couleurTemp = '#c9d1d9';
+        let affichageTemp = `${p.temp}°C`;
+        if (estTerre) { couleurTemp = '#10b981'; affichageTemp = `${p.temp}°C [TERRE]`; }
+        else if (estPlusSimilaire) { couleurTemp = '#c084fc'; affichageTemp = `${p.temp}°C ★`; }
+        else if (p.temp > 25) couleurTemp = 'var(--hot)';
+        else if (p.temp < 0) couleurTemp = 'var(--cold)';
+        else if (Math.abs(p.temp - 15) <= 12) couleurTemp = '#fbbf24';
+        
+        let couleurGrav = '#fbbf24';
+        let affichageGrav = `${p.gravite} g`;
+        if (estTerre) { couleurGrav = '#10b981'; affichageGrav = `1,00 g (Terre)`; }
+        else if (estPlusSimilaire) { couleurGrav = '#c084fc'; affichageGrav = `${p.gravite} g ★`; }
+        else if (Math.abs(p.gravite - 1.0) <= 0.2) couleurGrav = '#3fb950';
+        else if (Math.abs(p.gravite - 1.0) <= 0.4) couleurGrav = '#fbbf24';
+        else couleurGrav = '#f85149';
+        
+        let affichageESI = estTerre ? `<span class="earth-badge">1,00 (MAX - Terre)</span>` : `<span class="esi-badge">${p.esi}</span>`;
+        if (estPlusSimilaire) {
+            affichageESI = `<span class="habitable-badge">${p.esi} ★ Meilleur candidat</span>`;
+        }
+        
+        const affichageDist = estTerre ? '0 al (Terre)' : `${p.dist} al`;
+        const styleOxy = estTerre ? 'background:#10b981' : (estPlusSimilaire ? 'background:#c084fc' : 'background:var(--oxygen)');
+        const styleEau = estTerre ? 'background:#10b981' : (estPlusSimilaire ? 'background:#c084fc' : 'background:var(--water)');
+        
+        const rowClass = estPlusSimilaire ? 'habitable-row' : (estTerre ? 'earth-row' : '');
+        
+        tbodyPrincipal.innerHTML += `
+            <tr class="${rowClass}">
+                <td style="font-weight:bold; ${estTerre ? 'color:#10b981' : (estPlusSimilaire ? 'color:#c084fc' : 'color:var(--accent)')}">
+                    ${p.nom} ${estPlusSimilaire ? '<span class="habitable-badge" style="margin-left:8px;">★ Plus habitable</span>' : ''}
+                </td>
+                <td>${affichageDist}</td>
+                <td><div class="progress-bar-bg"><div class="progress-fill" style="width:${p.oxygene}%; ${styleOxy}"></div></div><span style="font-size:0.8rem">${p.oxygene}%</span></td>
+                <td><div class="progress-bar-bg"><div class="progress-fill" style="width:${p.eau}%; ${styleEau}"></div></div><span style="font-size:0.8rem">${p.eau}%</span></td>
+                <td style="color:${couleurGrav}; font-weight:bold">${affichageGrav}</td>
+                <td style="color:${couleurTemp}; font-weight:bold">${affichageTemp}</td>
+                <td>${affichageESI}</td>
+            </tr>
+        `;
+    });
+
+    // Tableau Système Solaire
+    const tbodySolaire = document.getElementById('tableau-solaire');
+    systemeSolaire.forEach(planete => {
+        const estTerreLigne = planete.nom === "TERRE";
+        const couleurTempSolaire = planete.nom === "TERRE" ? '#10b981' : (planete.temp > 100 ? 'var(--hot)' : (planete.temp < -50 ? 'var(--cold)' : '#fbbf24'));
+        const couleurGravSolaire = planete.nom === "TERRE" ? '#10b981' : (planete.gravite > 2 ? '#f85149' : (planete.gravite > 1.2 ? '#fbbf24' : '#3fb950'));
+        
+        tbodySolaire.innerHTML += `
+            <tr class="${estTerreLigne ? 'earth-row' : 'solar-row'}">
+                <td style="font-weight:bold; ${estTerreLigne ? 'color:#10b981' : 'color:var(--accent)'}">${planete.nom}</td>
+                <td>${planete.distance_ua} UA</td>
+                <td style="font-style:italic;">${planete.oxygene}</td>
+                <td style="font-style:italic;">${planete.eau}</td>
+                <td style="color:${couleurGravSolaire}; font-weight:bold">${planete.gravite} g</td>
+                <td style="color:${couleurTempSolaire}; font-weight:bold">${planete.temp}°C</td>
+                <td>${planete.type}</td>
+            </tr>
+        `;
+    });
+
+    // ================= GRAPHIQUES =================
+    
+    // Données pour les graphiques avec mise en évidence de Teegarden's b
+    const donneesBulleExo = exoplanetes.map(p => ({ x: p.oxygene, y: p.eau, r: p.esi * 12, label: p.nom }));
+    const meilleurPoint = { x: plusSimilaire.oxygene, y: plusSimilaire.eau, r: 18, label: plusSimilaire.nom + " (meilleur candidat)" };
+    const pointTerreBulle = { x: terre.oxygene, y: terre.eau, r: 22, label: "TERRE" };
+    
+    new Chart(document.getElementById('graphBulle'), {
+        type: 'bubble',
+        data: { datasets: [
+            { label: 'Exoplanètes', data: donneesBulleExo, backgroundColor: 'rgba(31, 111, 235, 0.65)', borderColor: '#1f6feb', borderWidth: 1.5 },
+            { label: 'Teegarden\'s b (plus habitable)', data: [meilleurPoint], backgroundColor: '#9333ea', borderColor: '#c084fc', borderWidth: 2.5, pointRadius: 10 },
+            { label: 'TERRE (Référence)', data: [pointTerreBulle], backgroundColor: '#10b981', borderColor: '#ffffff', borderWidth: 2.5 }
+        ]},
+        options: { responsive: true, maintainAspectRatio: false, scales: { x: { title: { display: true, text: 'Oxygène (%)', color: '#8b949e' }, min: 0, max: 95 }, y: { title: { display: true, text: 'Eau de surface (%)', color: '#8b949e' }, min: 0, max: 100 } }, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.raw.label}: O2 ${ctx.raw.x}% | Eau ${ctx.raw.y}%` } } } }
+    });
+
+    // Graphique ESI avec barre violette pour le meilleur
+    new Chart(document.getElementById('graphBarresESI'), {
+        type: 'bar',
+        data: { labels: exoplanetes.map(p => p.nom), datasets: [
+            { label: 'Indice ESI', data: exoplanetes.map(p => p.esi), backgroundColor: exoplanetes.map(p => p.nom === nomPlusSimilaire ? '#9333ea' : '#1f6feb80'), borderRadius: 6 },
+            { label: 'Terre (ESI = 1,00)', data: Array(exoplanetes.length).fill(1.0), type: 'line', borderColor: '#10b981', borderWidth: 3, borderDash: [6, 6], fill: false, pointRadius: 0 }
+        ]},
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 1.1, title: { display: true, text: 'ESI' }, ticks: { stepSize: 0.1 } } }, plugins: { tooltip: { callbacks: { label: (ctx) => ctx.dataset.label.includes('Terre') ? 'Similarité Terre = 1,00' : `ESI: ${ctx.raw}` } } } }
+    });
+
+    // Graphique radar
+    const meilleurOxy = plusSimilaire.oxygene / 21;
+    const meilleurEau = plusSimilaire.eau / 71;
+    const moyOxy = exoplanetes.reduce((a,b)=>a+b.oxygene,0)/exoplanetes.length / 21;
+    const moyEau = exoplanetes.reduce((a,b)=>a+b.eau,0)/exoplanetes.length / 71;
+    
+    new Chart(document.getElementById('graphRadar'), {
+        type: 'radar',
+        data: { labels: ['Oxygène', 'Eau', 'Gravité', 'Température'], datasets: [
+            { label: 'Terre (parfait)', data: [1,1,1,1], borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2 },
+            { label: 'Teegarden\'s b (meilleur)', data: [meilleurOxy, meilleurEau, 1 - Math.abs(plusSimilaire.gravite-1), 1 - Math.min(1, Math.abs(plusSimilaire.temp-15)/30)], borderColor: '#c084fc', backgroundColor: 'rgba(147,51,234,0.15)', borderWidth: 2.5 },
+            { label: 'Moyenne exoplanètes', data: [moyOxy, moyEau, 0.85, 0.65], borderColor: '#1f6feb', backgroundColor: 'rgba(31,111,235,0.2)', borderWidth: 1.5 }
+        ]},
+        options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, max: 1.2, ticks: { stepSize: 0.2 } } }, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} (Terre=1)` } } } }
+    });
+
+    // Histogramme eau
+    new Chart(document.getElementById('graphEauHisto'), {
+        type: 'bar',
+        data: { labels: exoplanetes.map(p => p.nom), datasets: [{ label: 'Eau de surface (%)', data: exoplanetes.map(p => p.eau), backgroundColor: exoplanetes.map(p => p.nom === nomPlusSimilaire ? '#9333ea' : '#3b82f6'), borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { title: { display: true, text: 'Couverture d\'eau (%)' }, min: 0, max: 100 }, x: { ticks: { rotation: 35 } } }, plugins: { tooltip: { callbacks: { label: (ctx) => `Eau: ${ctx.raw}% (Terre: 71%)` } } } }
+    });
+
+    // Gravité vs Température
+    const donneesGT = exoplanetes.map(p => ({ x: p.gravite, y: p.temp, label: p.nom }));
+    const meilleurGT = { x: plusSimilaire.gravite, y: plusSimilaire.temp, label: plusSimilaire.nom };
+    new Chart(document.getElementById('graphGraviteTemp'), {
+        type: 'scatter',
+        data: { datasets: [
+            { label: 'Exoplanètes', data: donneesGT, backgroundColor: '#1f6feb', pointRadius: 8 },
+            { label: 'Teegarden\'s b (meilleur)', data: [meilleurGT], backgroundColor: '#9333ea', pointRadius: 12, pointStyle: 'circle' },
+            { label: 'Terre (1g, 15°C)', data: [{ x: 1, y: 15, label: "TERRE" }], backgroundColor: '#10b981', pointRadius: 12 }
+        ]},
+        options: { responsive: true, maintainAspectRatio: false, scales: { x: { title: { display: true, text: 'Gravité (g)' }, min: 0.7, max: 1.5 }, y: { title: { display: true, text: 'Température (°C)' } } }, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.raw.label}: ${ctx.raw.x}g, ${ctx.raw.y}°C` } } } }
+    });
+
+    // Distance vs ESI
+    const donneesDistESI = exoplanetes.map(p => ({ x: p.dist, y: p.esi, label: p.nom }));
+    const meilleurDist = { x: plusSimilaire.dist, y: plusSimilaire.esi, label: plusSimilaire.nom };
+    new Chart(document.getElementById('graphDistanceESI'), {
+        type: 'scatter',
+        data: { datasets: [
+            { label: 'Exoplanètes', data: donneesDistESI, backgroundColor: '#f97316', pointRadius: 8 },
+            { label: 'Teegarden\'s b (meilleur)', data: [meilleurDist], backgroundColor: '#9333ea', pointRadius: 12 },
+            { label: 'Terre', data: [{ x: 0, y: 1.0, label: "TERRE" }], backgroundColor: '#10b981', pointRadius: 12 }
+        ]},
+        options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'logarithmic', title: { display: true, text: 'Distance (années-lumière)' }, ticks: { callback: (val) => val < 1 ? '0' : val+' al' } }, y: { title: { display: true, text: 'Indice ESI' }, min: 0.6, max: 1.05 } }, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.raw.label}: distance ${ctx.raw.x} al, ESI=${ctx.raw.y}` } } } }
+    });
+
+    // Graphiques Système Solaire
+    const planetesSansTerre = systemeSolaire.filter(p => p.nom !== "TERRE");
+    const gravitesSansTerre = planetesSansTerre.map(p => p.gravite);
+    const tempsSansTerre = planetesSansTerre.map(p => p.temp);
+    
+    new Chart(document.getElementById('graphGraviteSolaire'), {
+        type: 'bar',
+        data: { labels: planetesSansTerre.map(p => p.nom), datasets: [
+            { label: 'Gravité (g)', data: gravitesSansTerre, backgroundColor: '#1f6feb', borderRadius: 6 },
+            { label: 'Terre (1g)', data: Array(planetesSansTerre.length).fill(1.0), type: 'line', borderColor: '#10b981', borderWidth: 2.5, borderDash: [5, 5], fill: false, pointRadius: 0 }
+        ]},
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { title: { display: true, text: 'Gravité (g)' }, beginAtZero: true } } }
+    });
+
+    new Chart(document.getElementById('graphTempSolaire'), {
+        type: 'bar',
+        data: { labels: planetesSansTerre.map(p => p.nom), datasets: [
+            { label: 'Température (°C)', data: tempsSansTerre, backgroundColor: '#f85149', borderRadius: 6 },
+            { label: 'Terre (15°C)', data: Array(planetesSansTerre.length).fill(15), type: 'line', borderColor: '#10b981', borderWidth: 2.5, borderDash: [5, 5], fill: false, pointRadius: 0 }
+        ]},
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { title: { display: true, text: 'Température (°C)' } } } }
+    });
+
+    function openTab(evt, tabName) {
+        let i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) tabcontent[i].classList.remove("active");
+        tablinks = document.getElementsByClassName("tab-btn");
+        for (i = 0; i < tablinks.length; i++) tablinks[i].classList.remove("active");
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    const creditDiv = document.createElement('div');
+    creditDiv.style.textAlign = 'center';
+    creditDiv.style.marginTop = '20px';
+    creditDiv.style.fontSize = '0.7rem';
+    creditDiv.style.color = '#6e7681';
+    creditDiv.innerHTML = 'Conception et visualisation des données par ANTON NELCON Steve — Métriques d\'habitabilité basées sur le système de référence terrestre. Données exoplanétaires : NASA/Caltech, PHL. Données Système Solaire : NASA Planetary Fact Sheets (2024).';
+    document.querySelector('footer').before(creditDiv);
+</script>
+</body>
+</html>
